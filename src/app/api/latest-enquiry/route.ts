@@ -4,12 +4,17 @@ import { getSupabase } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 
 // Read-side endpoint for the Retell voice agent: returns the most recent
-// enquiry in a shape the agent can read back to the caller.
-export async function GET() {
+// enquiry in a shape the agent can read back to the caller. Gated by a shared
+// secret so enquirer details are not publicly readable.
+export async function GET(req: Request) {
+  const token = process.env.LATEST_ENQUIRY_TOKEN;
+  if (!token || req.headers.get("x-api-key") !== token) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   try {
     const { data, error } = await getSupabase()
       .from("enquiries")
-      .select("name, email, intent, property_address, budget, urgency, summary, created_at")
+      .select("name, intent, property_address, budget, urgency, summary, created_at")
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -29,10 +34,7 @@ export async function GET() {
     ].filter(Boolean);
 
     return NextResponse.json({ ok: true, enquiry: e, spoken: parts.join(" ") });
-  } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "unknown error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ ok: false, error: "internal error" }, { status: 500 });
   }
 }
