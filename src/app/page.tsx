@@ -1,5 +1,5 @@
-import { getSupabase } from '@/lib/supabase';
-import type { Enquiry, Intent, Urgency } from '@/lib/types';
+import { getEnquiryRepository } from '@/lib/container';
+import type { Enquiry, Intent, Urgency } from '@/lib/schemas';
 import { TestEnquiryButton } from '@/components/TestEnquiryButton';
 
 export const dynamic = 'force-dynamic';
@@ -46,12 +46,8 @@ function Badge({ label, className }: { label: string; className: string }) {
 
 async function fetchEnquiries(): Promise<{ enquiries: Enquiry[]; loadError: string | null }> {
   try {
-    const { data, error } = await getSupabase()
-      .from('enquiries')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) throw new Error(error.message);
-    return { enquiries: (data ?? []) as Enquiry[], loadError: null };
+    const enquiries = await getEnquiryRepository().listNewestFirst();
+    return { enquiries, loadError: null };
   } catch (err) {
     console.error('Failed to load enquiries:', err);
     return { enquiries: [], loadError: 'storage unavailable' };

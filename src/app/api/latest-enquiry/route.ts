@@ -1,31 +1,28 @@
-import { NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { NextResponse } from 'next/server';
+import { getEnquiryRepository } from '@/lib/container';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 // Read-side endpoint for the Retell voice agent: returns the most recent
-// enquiry in a shape the agent can read back to the caller. Gated by a shared
-// secret so enquirer details are not publicly readable.
+// enquiry in a shape the agent can read back to the caller (FR-010).
+// Gated by a shared secret; email is never included.
 export async function GET(req: Request) {
   const token = process.env.LATEST_ENQUIRY_TOKEN;
-  if (!token || req.headers.get("x-api-key") !== token) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  if (!token || req.headers.get('x-api-key') !== token) {
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
   try {
-    const { data, error } = await getSupabase()
-      .from("enquiries")
-      .select("name, intent, property_address, budget, urgency, summary, created_at")
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      return NextResponse.json({ ok: true, enquiry: null, spoken: "There are no enquiries on file yet." });
+    const e = await getEnquiryRepository().latest();
+    if (!e) {
+      return NextResponse.json({
+        ok: true,
+        enquiry: null,
+        spoken: 'There are no enquiries on file yet.',
+      });
     }
 
-    const e = data[0];
     const parts = [
-      `The latest enquiry is from ${e.name ?? "an unknown contact"}.`,
+      `The latest enquiry is from ${e.name ?? 'an unknown contact'}.`,
       `Intent: ${e.intent}.`,
       e.property_address ? `Property: ${e.property_address}.` : null,
       e.budget ? `Budget: ${e.budget}.` : null,
@@ -33,8 +30,9 @@ export async function GET(req: Request) {
       `Summary: ${e.summary}`,
     ].filter(Boolean);
 
-    return NextResponse.json({ ok: true, enquiry: e, spoken: parts.join(" ") });
-  } catch {
-    return NextResponse.json({ ok: false, error: "internal error" }, { status: 500 });
+    return NextResponse.json({ ok: true, enquiry: e, spoken: parts.join(' ') });
+  } catch (err) {
+    console.error('latest-enquiry failed:', err);
+    return NextResponse.json({ ok: false, error: 'internal error' }, { status: 500 });
   }
 }
