@@ -44,17 +44,24 @@ function Badge({ label, className }: { label: string; className: string }) {
   );
 }
 
-async function fetchEnquiries(): Promise<Enquiry[]> {
-  const { data, error } = await getSupabase()
-    .from('enquiries')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(`Failed to load enquiries: ${error.message}`);
-  return (data ?? []) as Enquiry[];
+async function fetchEnquiries(): Promise<{ enquiries: Enquiry[]; loadError: string | null }> {
+  try {
+    const { data, error } = await getSupabase()
+      .from('enquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return { enquiries: (data ?? []) as Enquiry[], loadError: null };
+  } catch (err) {
+    return {
+      enquiries: [],
+      loadError: err instanceof Error ? err.message : 'Failed to load enquiries',
+    };
+  }
 }
 
 export default async function Home() {
-  const enquiries = await fetchEnquiries();
+  const { enquiries, loadError } = await fetchEnquiries();
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -78,7 +85,16 @@ export default async function Home() {
           first. Triaged automatically on arrival.
         </p>
 
-        {enquiries.length === 0 ? (
+        {loadError ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+            <p className="font-medium">Storage not ready</p>
+            <p className="mt-1">
+              Could not load enquiries: {loadError}. If this is a fresh setup, run{' '}
+              <code className="rounded bg-amber-100 px-1">supabase/schema.sql</code> in the Supabase
+              SQL editor, then reload.
+            </p>
+          </div>
+        ) : enquiries.length === 0 ? (
           <div className="rounded-xl border border-dashed border-stone-300 bg-white p-12 text-center">
             <h2 className="font-serif text-lg text-stone-700">
               No enquiries yet
