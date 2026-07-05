@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import { getSupabase } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
+
+// Read-side endpoint for the Retell voice agent: returns the most recent
+// enquiry in a shape the agent can read back to the caller.
+export async function GET() {
+  try {
+    const { data, error } = await getSupabase()
+      .from("enquiries")
+      .select("name, email, intent, property_address, budget, urgency, summary, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return NextResponse.json({ ok: true, enquiry: null, spoken: "There are no enquiries on file yet." });
+    }
+
+    const e = data[0];
+    const parts = [
+      `The latest enquiry is from ${e.name ?? "an unknown contact"}.`,
+      `Intent: ${e.intent}.`,
+      e.property_address ? `Property: ${e.property_address}.` : null,
+      e.budget ? `Budget: ${e.budget}.` : null,
+      `Urgency: ${e.urgency}.`,
+      `Summary: ${e.summary}`,
+    ].filter(Boolean);
+
+    return NextResponse.json({ ok: true, enquiry: e, spoken: parts.join(" ") });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : "unknown error" },
+      { status: 500 }
+    );
+  }
+}
