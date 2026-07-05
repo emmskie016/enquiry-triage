@@ -11,5 +11,5 @@
 - [x] T09 Security headers in next.config; update .env.example, README (architecture, curl w/ secret, trade-offs). (NFR-003)
 - [x] T10 Update TestEnquiryButton → posts to /api/enquiry with NEXT_PUBLIC test path (server action proxy so secret stays server-side).
 - [x] T11 Full suite + build + lint green; commit. (SC-001, SC-002)
-- [ ] T12 Deploy: set WEBHOOK_SECRET + ANTHROPIC_API_KEY envs, vercel --prod. (SC-002)
-- [ ] T13 E2E: Sarah sample + messy sample; verify dashboard + voice endpoint; deactivate n8n wf. (SC-003, SC-004)
+- [x] T12 Deploy: set WEBHOOK_SECRET + ANTHROPIC_API_KEY envs, vercel --prod. (SC-002)
+- [x] T13 E2E: Sarah sample + messy sample; verify dashboard + voice endpoint; deactivate n8n wf. (SC-003, SC-004)
